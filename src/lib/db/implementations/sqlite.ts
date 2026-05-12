@@ -100,7 +100,7 @@ export function createSqliteAdapter(dbPath: string): DBAdapter {
     async create(data: CreatePlot): Promise<Plot> {
       const id = uuidv4();
       const areaSqFt = data.lengthFt * data.widthFt;
-      db.prepare(`INSERT INTO plots (id, name, length_ft, width_ft, area_sqft, status) VALUES (?, ?, ?, ?, ?, ?)`).run(id, data.name, data.lengthFt, data.widthFt, areaSqFt, data.status);
+      db.prepare(`INSERT INTO plots (id, name, length_ft, width_ft, area_sqft, status) VALUES (?, ?, ?, ?, ?, ?)`).run(id, data.name, data.lengthFt, data.widthFt, areaSqFt, data.status ?? 'available');
       return (await adapter.plot.findById(id))!;
     },
     async findAll(filters?: { status?: PlotStatus }): Promise<Plot[]> {
@@ -228,6 +228,9 @@ export function createSqliteAdapter(dbPath: string): DBAdapter {
       const r = db.prepare(`SELECT * FROM alerts WHERE id = ?`).get(id) as any;
       return rowToAlert(r);
     },
+    async findAll(): Promise<Alert[]> {
+      return db.prepare(`SELECT * FROM alerts ORDER BY alert_date`).all().map(rowToAlert);
+    },
     async findByDateRange(start: string, end: string): Promise<Alert[]> {
       return db.prepare(`SELECT * FROM alerts WHERE alert_date >= ? AND alert_date <= ? ORDER BY alert_date`).all(start, end).map(rowToAlert);
     },
@@ -315,6 +318,17 @@ export function createSqliteAdapter(dbPath: string): DBAdapter {
         CREATE INDEX IF NOT EXISTS idx_instalments_status ON instalments(status);
         CREATE INDEX IF NOT EXISTS idx_alerts_date ON alerts(alert_date);
         CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status);
+      `);
+    },
+    clear: async () => {
+      db.exec(`
+        DELETE FROM alerts;
+        DELETE FROM instalments;
+        DELETE FROM purchases;
+        DELETE FROM effective_prices;
+        DELETE FROM plots;
+        DELETE FROM customers;
+        DELETE FROM users;
       `);
     },
     user: userSection,

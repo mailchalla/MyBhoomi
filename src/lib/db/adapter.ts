@@ -148,11 +148,13 @@ export interface DBAdapter {
   // Alerts
   alert: {
     create(data: CreateAlert): Promise<Alert>;
+    findAll(): Promise<Alert[]>;
     findByDateRange(start: string, end: string): Promise<Alert[]>;
     findByCustomerId(customerId: string): Promise<Alert[]>;
     updateStatus(id: string, status: AlertStatus, sentAt?: string): Promise<Alert>;
   };
 
-  // Internal — DB initialization
+  // Internal — DB initialization and reset
   initialize(): Promise<void>;
+  clear(): Promise<void>;
 }

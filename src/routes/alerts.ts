@@ -14,11 +14,8 @@ router.get('/', async (req, res) => {
     res.json({ alerts });
     return;
   }
-  const today = new Date().toISOString().split('T')[0];
-  const end = new Date();
-  end.setDate(end.getDate() + 30);
-  const alerts = await db.alert.findByDateRange(today, end.toISOString().split('T')[0]);
-  res.json({ alerts });
+  const alerts = await db.alert.findAll();
+  res.json(alerts);
 });
 
 router.get('/unread', async (req, res) => {

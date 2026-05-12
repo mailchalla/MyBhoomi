@@ -6,6 +6,9 @@ async function seed() {
   await initDb();
   const db = getDb();
 
+  // Clear existing data so seed is re-runnable
+  await db.clear();
+
   const adminHash = await bcrypt.hash('admin123', 12);
   const customerHash = await bcrypt.hash('customer123', 12);
 
