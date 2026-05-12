@@ -114,13 +114,22 @@ export function createSqliteAdapter(dbPath: string): DBAdapter {
       return r ? rowToPlot(r) : null;
     },
     async update(id: string, data: UpdatePlot): Promise<Plot> {
+      // Pre-read to get current dimensions for area recomputation
+      const current = await adapter.plot.findById(id);
+      if (!current) throw new Error('Plot not found');
+
       const sets: string[] = [];
       const vals: any[] = [];
       if (data.name !== undefined) { sets.push('name = ?'); vals.push(data.name); }
-      if (data.lengthFt !== undefined) { sets.push('length_ft = ?'); vals.push(data.lengthFt); sets.push('area_sqft = ?'); vals.push(data.lengthFt * (data.widthFt ?? 0)); }
+      const newLength = data.lengthFt ?? current.lengthFt;
+      const newWidth = data.widthFt ?? current.widthFt;
+      if (data.lengthFt !== undefined) { sets.push('length_ft = ?'); vals.push(data.lengthFt); }
       if (data.widthFt !== undefined) { sets.push('width_ft = ?'); vals.push(data.widthFt); }
+      if (data.lengthFt !== undefined || data.widthFt !== undefined) {
+        sets.push('area_sqft = ?'); vals.push(newLength * newWidth);
+      }
       if (data.status !== undefined) { sets.push('status = ?'); vals.push(data.status); }
-      if (!sets.length) return (await adapter.plot.findById(id))!;
+      if (!sets.length) return current;
       vals.push(id);
       db.prepare(`UPDATE plots SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
       return (await adapter.plot.findById(id))!;
@@ -311,6 +320,7 @@ export function createSqliteAdapter(dbPath: string): DBAdapter {
     user: userSection,
     customer: customerSection,
     plot: plotSection,
+    price: priceSection,
     purchase: purchaseSection,
     instalment: instalmentSection,
     alert: alertSection,
