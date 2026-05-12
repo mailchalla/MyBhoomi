@@ -2,7 +2,9 @@ import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-
+import { initDb } from './lib/db';
+import { config } from './config';
+import { alertService } from './services/alertService';
 import authRouter from './routes/auth';
 import usersRouter from './routes/users';
 import plotsRouter from './routes/plots';
@@ -12,12 +14,6 @@ import alertsRouter from './routes/alerts';
 import reportsRouter from './routes/reports';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
-
-// Database initialisation (implemented in later tasks; stub here for clean startup)
-async function initDb(): Promise<void> {
-  // Will be implemented in Task 2 / Task 8
-}
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
@@ -27,7 +23,6 @@ app.use(
     credentials: true,
   })
 );
-
 app.use(express.json());
 app.use(cookieParser());
 
@@ -37,16 +32,6 @@ app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok' });
 });
 
-app.get('/api/jobs/check-alerts', (req: Request, res: Response) => {
-  const secret = req.headers['x-cron-secret'] as string | undefined;
-  if (secret !== process.env.ALERT_CRON_SECRET) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
-  // Will be wired up in Task 7
-  res.json({ message: 'Alert check triggered (stub)' });
-});
-
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/plots', plotsRouter);
@@ -54,6 +39,18 @@ app.use('/api/customers', customersRouter);
 app.use('/api/purchases', purchasesRouter);
 app.use('/api/alerts', alertsRouter);
 app.use('/api/reports', reportsRouter);
+
+// ── Cron endpoint ────────────────────────────────────────────────────────────
+
+app.get('/api/jobs/check-alerts', async (_req: Request, res: Response) => {
+  const secret = _req.headers['x-cron-secret'] as string | undefined;
+  if (secret !== config.ALERT_CRON_SECRET) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  await alertService.checkAndSendDueAlerts();
+  res.json({ ok: true, processed: 'alerts' });
+});
 
 // ── Global error handler ──────────────────────────────────────────────────────
 
@@ -67,8 +64,9 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 async function start(): Promise<void> {
   try {
     await initDb();
-    app.listen(PORT, () => {
-      console.log(`Backend running on http://localhost:${PORT}`);
+    console.log('Database initialized');
+    app.listen(config.PORT, () => {
+      console.log(`Backend running on http://localhost:${config.PORT}`);
     });
   } catch (err) {
     console.error('Failed to start server:', err);

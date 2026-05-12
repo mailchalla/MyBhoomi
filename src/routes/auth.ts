@@ -3,7 +3,7 @@ import type { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
-import { getDb } from '../lib/db';
+import { getDb } from '../db';
 import { config } from '../config';
 import { authenticate } from '../middleware/auth';
 
